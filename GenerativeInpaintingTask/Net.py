@@ -499,7 +499,7 @@ class InpaintContextualAttentionGenerator(nn.Module):
         if mask is None:
             mask = torch.zeros(1, 1, x.size(2), x.size(3)).type_as(x)
         # extend latent dimension for gating
-        latent_feature_placeholder = torch.ones(x.size(0), 1, x.size(2), x.size(3))
+        latent_feature_placeholder = torch.ones(x.size(0), 1, x.size(2), x.size(3)).type_as(x)
         # broadcast tensor dimension for pixel-wise masking
         pixel_wise_mask = latent_feature_placeholder * mask
 
@@ -508,12 +508,12 @@ class InpaintContextualAttentionGenerator(nn.Module):
             [x, latent_feature_placeholder, pixel_wise_mask],
             dim=1
         )
-        coarse_result = self.coarse_stage1.forward(stage1_input)
+        coarse_result = self.coarse_stage1(stage1_input)
 
         # StageII: Generate Refined Result
         # mask: 1 as invalid (incomplete), 0 as valid (original pixels)
         stage2_input: torch.Tensor = coarse_result * mask + stage1_input[:, 0:3, :, :] * (1. - mask)
-        refined_result = self.refinement_stage2.forward(stage2_input, mask)
+        refined_result = self.refinement_stage2(stage2_input, mask)
 
         return coarse_result, refined_result
 
@@ -559,7 +559,7 @@ def Test_GatedConv2d():
     x = torch.ones(2, 2, 2, 3)
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}\n\t{x}')
     net = GatedConv2d(in_channels=2, out_channels=1, kernel_size=3, stride=1, padding=1)
-    y = net.forward(x)
+    y = net(x)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}\n\t{y}')
 
 
@@ -568,7 +568,7 @@ def Test_UpSampler2x2():
     x = torch.ones(1, 2, 2, 3)
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}\n\t{x}')
     net = UpSampler2x2(in_channels=2, out_channels=1)
-    y = net.forward(x)
+    y = net(x)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}\n\t{y}')
 
 
@@ -577,7 +577,7 @@ def Test_SpectralNormConv2d():
     x = torch.ones(2, 3, 8, 16)
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     net = SpectralNormConv2d(in_channels=3, out_channels=4, kernel_size=3, stride=2, padding=1)
-    y = net.forward(x)
+    y = net(x)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}')
 
 
@@ -588,7 +588,7 @@ def Test_ContextualAttention():
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     print(f'\tmask\t -> \tshape: {mask.shape}, dtype: {mask.dtype}, device: {mask.device}')
     net = ContextualAttention(kernel_size=3, stride=1, dilation=1, fuse_k=3, softmax_scale=10, fuse=True)
-    y = net.forward(x, x, mask)
+    y = net(x, x, mask)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}')
     # test dilation
     x = torch.ones(2, 3, 128, 128)
@@ -596,7 +596,7 @@ def Test_ContextualAttention():
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     print(f'\tmask\t -> \tshape: {mask.shape}, dtype: {mask.dtype}, device: {mask.device}')
     net = ContextualAttention(kernel_size=3, stride=1, dilation=2, fuse_k=3, softmax_scale=10, fuse=True)
-    y = net.forward(x, x, mask)
+    y = net(x, x, mask)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}')
 
 
@@ -606,7 +606,7 @@ def Test_Generator_CoarseNet_StageI():
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     net = Generator_CoarseNet_StageI(in_channels=3,
                                      latent_channels_basis=24)  # the same when using cnum=48 in official implementation
-    y = net.forward(x)
+    y = net(x)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}')
 
 
@@ -617,7 +617,7 @@ def Test_Generator_2BranchRefinementNet_StageII():
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     print(f'\tmask\t -> \tshape: {mask.shape}, dtype: {mask.dtype}, device: {mask.device}')
     net = Generator_2BranchRefinementNet_StageII(in_channels=3, latent_channels_basis=24)
-    y = net.forward(x, mask)
+    y = net(x, mask)
     print(f'\toutput\t -> \tshape: {y.shape}, dtype: {y.dtype}, device: {y.device}')
 
 
@@ -628,7 +628,7 @@ def Test_InpaintContextualAttentionGenerator():
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     print(f'\tmask\t -> \tshape: {mask.shape}, dtype: {mask.dtype}, device: {mask.device}')
     net = InpaintContextualAttentionGenerator(in_channels=3, latent_channels_basis=24)
-    coarse_result, refined_result = net.forward(x, mask)
+    coarse_result, refined_result = net(x, mask)
     print(f'\tcoarse_result\t -> \tshape: {coarse_result.shape}, dtype: {coarse_result.dtype}, '
           f'device: {coarse_result.device}')
     print(f'\trefined_result\t -> \tshape: {refined_result.shape}, dtype: {refined_result.dtype}, '
@@ -636,7 +636,7 @@ def Test_InpaintContextualAttentionGenerator():
     print(f'\tAs auto-encoder:')
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     print(f'\tmask\t -> \tshape: {mask.shape}, dtype: {mask.dtype}, device: {mask.device}')
-    coarse_result, refined_result = net.forward(x)
+    coarse_result, refined_result = net(x)
     print(f'\tcoarse_result\t -> \tshape: {coarse_result.shape}, dtype: {coarse_result.dtype}, '
           f'device: {coarse_result.device}')
     print(f'\trefined_result\t -> \tshape: {refined_result.shape}, dtype: {refined_result.dtype}, '
@@ -648,7 +648,7 @@ def Test_SpectralNormMarkovianDiscriminator():
     x = torch.ones(2, 3, 128, 128)
     print(f'\tinput\t -> \tshape: {x.shape}, dtype: {x.dtype}, device: {x.device}')
     net = SpectralNormMarkovianDiscriminator(in_channels=3, latent_channels_basis=64)
-    output = net.forward(x)
+    output = net(x)
     print(f'\toutput\t -> \tshape: {output.shape}, dtype: {output.dtype}, '
           f'device: {output.device}')
 
