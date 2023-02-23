@@ -16,7 +16,7 @@ from Testbench import GAN
 def train():
     batch_size = 8
     dm = CelebAMaskHQ(out_shape=(256, 256), batch_size=batch_size)
-    model = S1PatchGAN(256, 256, 3, 128, 128, 32, 32, 0, 0, batch_size)
+    model = SNPatchGAN(256, 256, 3, 128, 128, 32, 32, 0, 0, batch_size)
     tensorboard = TensorBoardLogger(save_dir='.', name='SN_PatchGAN_logs')
     checkpoint_callback = ModelCheckpoint(save_top_k=5, monitor='epoch', mode='max')
     trainer = Trainer(
