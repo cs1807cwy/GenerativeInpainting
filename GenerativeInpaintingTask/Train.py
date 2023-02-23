@@ -17,14 +17,14 @@ def train():
     dm = CelebAMaskHQ(out_shape=(256, 256), batch_size=batch_size)
     model = SNPatchGAN(256, 256, 3, 128, 128, 32, 32, 0, 0, batch_size)
     tensorboard = TensorBoardLogger(save_dir='.', name='SN_PatchGAN_logs')
-    checkpoint_callback = ModelCheckpoint(save_top_k=5, monitor='epoch', mode='max')
+    # checkpoint_callback = ModelCheckpoint(save_top_k=5, monitor='epoch', mode='max')
     trainer = Trainer(
         logger=tensorboard,
         default_root_dir='./SN_PatchGAN_logs',
         accelerator="gpu",
         devices=[9] if torch.cuda.is_available() else None,  # limiting got iPython runs
         max_epochs=10,
-        callbacks=[TQDMProgressBar(refresh_rate=20), checkpoint_callback],
+        callbacks=[TQDMProgressBar(refresh_rate=20)],
     )
     trainer.fit(model, dm)
 
