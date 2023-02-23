@@ -38,7 +38,7 @@ class CelebAMaskHQ(LightningDataModule):
             self,
             data_dir: str = 'CelebAMask-HQ/CelebA-HQ-img',
             out_shape: Optional[tuple[int, int]] = None,
-            batch_size: int = 8,
+            batch_size: int = 16,
             num_workers: int = 1,
             validation_ratio: float = 0.1,
             test_ratio: float = 0.1,
@@ -145,7 +145,7 @@ class ILSVRC2012_Task1_2(LightningDataModule):
             validation_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_val',
             test_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_test_v10102019',
             out_shape: Optional[tuple[int, int]] = None,
-            batch_size: int = 8,
+            batch_size: int = 16,
             num_workers: int = 1,
     ):
         super().__init__()
@@ -245,7 +245,7 @@ class ILSVRC2012_Task3(LightningDataModule):
             validation_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_val',
             test_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_test_v10102019',
             out_shape: Optional[tuple[int, int]] = None,
-            batch_size: int = 8,
+            batch_size: int = 16,
             num_workers: int = 1,
     ):
         super().__init__()
