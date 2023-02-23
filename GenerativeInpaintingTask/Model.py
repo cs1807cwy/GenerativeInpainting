@@ -30,7 +30,7 @@ class SNPatchGAN(LightningModule):
             l1_loss_alpha: float = 1.,
             gan_loss_alpha: float = 1.,
             gan_with_mask: bool = True,
-            lr: float = 0.0002,
+            lr: float = 1e-4,
             b1: float = 0.5,
             b2: float = 0.999,
             **kwargs,
@@ -39,7 +39,7 @@ class SNPatchGAN(LightningModule):
         self.save_hyperparameters()
 
         generator_in_channels = image_channel
-        discriminator_in_channels = image_channel * 2
+        discriminator_in_channels = image_channel
 
         # networks
         self.generator: InpaintContextualAttentionGenerator = \
@@ -47,11 +47,12 @@ class SNPatchGAN(LightningModule):
         self.discriminator = SpectralNormMarkovianDiscriminator(in_channels=discriminator_in_channels)
         self.example_input_array = torch.zeros(batch_size, 3, 256, 256)
 
+        # losses
+        self.l1_loss = torch.nn.L1Loss()
+        self.hinge_loss = torch.nn.HingeEmbeddingLoss()
+
     def forward(self, x, mask):
         return self.generator.forward(x, mask)
-
-    def adversarial_loss(self, y_hat, y):
-        return F.binary_cross_entropy(y_hat, y)
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         self.ground_truth = batch
@@ -75,13 +76,16 @@ class SNPatchGAN(LightningModule):
             grid = torchvision.utils.make_grid(sample_imgs)
             self.logger.experiment.add_image("training_generated_images", grid, self.current_epoch)
 
+            # pair for comparation
+            self.negative_statement = self.discriminator.forward(self.complete_result)
+            self.valid = torch.ones_like(self.negative_statement).type_as(self.negative_statement)
+
             # adversarial loss is binary cross-entropy
             g_l1_loss = self.hparams.l1_loss_alpha * \
-                        (F.l1_loss(self.ground_truth, self.coarse_result) +
-                         F.l1_loss(self.ground_truth, self.refined_result))
-
-            g_hinge_loss = -torch.mean(self.discriminator.forward())
-
+                        (self.l1_loss(self.ground_truth, self.coarse_result) +
+                         self.l1_loss(self.ground_truth, self.refined_result))
+            g_hinge_loss = -torch.mean(self.discriminator.forward(self.complete_result))
+            g_loss = g_l1_loss + g_hinge_loss
             self.log("g_loss", g_loss, prog_bar=True)
 
             return g_loss
@@ -90,20 +94,11 @@ class SNPatchGAN(LightningModule):
         if optimizer_idx == 1:
             # Measure discriminator's ability to classify real from generated samples
 
-            # how well can it label as real?
-            valid = torch.ones(imgs.size(0), 1)
-            valid = valid.type_as(imgs)
-
-            real_loss = self.adversarial_loss(self.discriminator(imgs), valid)
-
-            # how well can it label as fake?
-            fake = torch.zeros(imgs.size(0), 1)
-            fake = fake.type_as(imgs)
-
-            fake_loss = self.adversarial_loss(self.discriminator(self(z).detach()), fake)
+            # pair for comparation
+            d_loss = 0.5 * (torch.mean(F.relu(1. - self.discriminator.forward(self.ground_truth))) +
+                            torch.mean(F.relu(1. + self.discriminator.forward(self.complete_result))))
 
             # discriminator loss is the average of these
-            d_loss = (real_loss + fake_loss) / 2
             self.log("d_loss", d_loss, prog_bar=True)
             return d_loss
 
