@@ -1,9 +1,11 @@
 import os
 import numpy as np
 import cv2
+from PIL import Image
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Union
 
 import torch
+import torchvision
 import torchvision.transforms as transforms
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import Dataset, DataLoader, random_split
@@ -15,17 +17,17 @@ class CelebAMaskHQ(LightningDataModule):
                      image_paths: list[str],
                      resize_shape: Optional[tuple[int, int]], ):
             self.image_paths: list[str] = image_paths
-            self.resize_shape: Optional[tuple[int, int]] = resize_shape
+            self.resize_shape = resize_shape
 
         def __getitem__(self, idx: int) -> torch.Tensor:
-            item: np.ndarray = cv2.imread(self.image_paths[idx])
+            item: Image.Image = Image.open(self.image_paths[idx]).convert('RGB')
 
             # print(item.shape)
 
             if self.resize_shape is not None:
-                item = cv2.resize(item, self.resize_shape)
+                item = transforms.Resize(self.resize_shape)(item)
             item: torch.Tensor = transforms.ToTensor()(item)
-            item.mul_(2).add_(-1)
+            item.mul_(2.).add_(-1.)
 
             # print(item.shape)
 
@@ -121,12 +123,10 @@ class ILSVRC2012_Task1_2(LightningDataModule):
             )
 
         def __getitem__(self, idx: int) -> torch.Tensor:
-            item: np.ndarray = cv2.imread(self.image_paths[idx])
+            item: Image.Image = Image.open(self.image_paths[idx]).convert('RGB')
 
             # print(item.shape)
-            imgw, imgh, _ = item.shape
-            if imgh < self.crop_shape[0] or imgw < self.crop_shape[1]:
-                item = transforms.ToPILImage()(item)
+            if item.height < self.crop_shape[0] or item.width < self.crop_shape[1]:
                 item = transforms.Resize(min(self.crop_shape))(item)
 
             item: torch.Tensor = self.transform(item)
@@ -221,12 +221,10 @@ class ILSVRC2012_Task3(LightningDataModule):
             )
 
         def __getitem__(self, idx: int) -> torch.Tensor:
-            item: np.ndarray = cv2.imread(self.image_paths[idx])
+            item: Image.Image = Image.open(self.image_paths[idx]).convert('RGB')
 
             # print(item.shape)
-            imgw, imgh, _ = item.shape
-            if imgh < self.crop_shape[0] or imgw < self.crop_shape[1]:
-                item = transforms.ToPILImage()(item)
+            if item.height < self.crop_shape[0] or item.width < self.crop_shape[1]:
                 item = transforms.Resize(min(self.crop_shape))(item)
 
             item: torch.Tensor = self.transform(item)
@@ -307,7 +305,8 @@ class ILSVRC2012_Task3(LightningDataModule):
 
 
 def Test_CelebAMaskHQ():
-    print('\033[34;30mTesting DataModule: CelebAMask-HQ\033[0m')
+    import matplotlib.pyplot as plt
+    print('[Test] DataModule: CelebAMask-HQ')
     dataset = CelebAMaskHQ(data_dir='./CelebAMask-HQ/CelebA-HQ-img',
                            batch_size=2,
                            out_shape=(256, 256),
@@ -319,33 +318,42 @@ def Test_CelebAMaskHQ():
     print('dataset_train:')
     for idx, batch in enumerate(dataset_train):
         print(f'idx: {idx} batch_size: {batch.shape}')
+    for idx, batch in enumerate(dataset_train):
+        print(f'idx: {idx} batch_size: {batch.shape}')
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'CelebAMaskHQ_dataset_train_{idx}')
+            plt.title(f'CelebAMaskHQ_dataset_train_{idx}')
+            plt.imshow(grid)
+            plt.show()
     dataset_val = dataset.val_dataloader()
     print('dataset_val:')
     for idx, batch in enumerate(dataset_val):
         print(f'idx: {idx} batch_size: {batch.shape}')
-        for i in range(batch.size(0)):
-            img: torch.Tensor = batch[i].permute(1, 2, 0)
-            img.add_(1).mul_(0.5)
-            img = img.numpy()
-            cv2.imshow(f'val_{i}', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'CelebAMaskHQ_dataset_val_{idx}')
+            plt.title(f'CelebAMaskHQ_dataset_val_{idx}')
+            plt.imshow(grid)
+            plt.show()
     dataset_test = dataset.test_dataloader()
     print('dataset_test:')
     for idx, batch in enumerate(dataset_test):
         print(f'idx: {idx} batch_size: {batch.shape}')
-        for i in range(batch.size(0)):
-            img = batch[i].permute(1, 2, 0)
-            img.add_(1).mul_(0.5)
-            img = img.numpy()
-            cv2.imshow(f'test_{i}', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
-
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'CelebAMaskHQ_dataset_test_{idx}')
+            plt.title(f'CelebAMaskHQ_dataset_test_{idx}')
+            plt.imshow(grid)
+            plt.show()
 
 def Test_ILSVRC2012t1_2():
-    print('\033[34;30mTesting DataModule: ILSVRC2012 Task 1&2\033[0m')
-    dataset = ILSVRC2012_Task1_2(batch_size=2,
+    import matplotlib.pyplot as plt
+    print('[Test] DataModule: ILSVRC2012 Task 1&2')
+    dataset = ILSVRC2012_Task1_2(batch_size=8,
                                  out_shape=(256, 256), )
     dataset.prepare_data()
     dataset.setup()
@@ -353,33 +361,41 @@ def Test_ILSVRC2012t1_2():
     print('dataset_train:')
     for idx, batch in enumerate(dataset_train):
         print(f'idx: {idx} batch_size: {batch.shape}')
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'ILSVRC2012t1_2_dataset_train_{idx}')
+            plt.title(f'ILSVRC2012t1_2_dataset_train_{idx}')
+            plt.imshow(grid)
+            plt.show()
     dataset_val = dataset.val_dataloader()
     print('dataset_val:')
     for idx, batch in enumerate(dataset_val):
         print(f'idx: {idx} batch_size: {batch.shape}')
-        for i in range(batch.size(0)):
-            img = batch[i].permute(1, 2, 0)
-            img.add_(1).mul_(0.5)
-            img = img.numpy()
-            cv2.imshow(f'val_{i}', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'ILSVRC2012t1_2_dataset_val_{idx}')
+            plt.title(f'ILSVRC2012t1_2_dataset_val_{idx}')
+            plt.imshow(grid)
+            plt.show()
     dataset_test = dataset.test_dataloader()
     print('dataset_test:')
     for idx, batch in enumerate(dataset_test):
         print(f'idx: {idx} batch_size: {batch.shape}')
-        for i in range(batch.size(0)):
-            img = batch[i].permute(1, 2, 0)
-            img.add_(1).mul_(0.5)
-            img = img.numpy()
-            cv2.imshow(f'test_{i}', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'ILSVRC2012t1_2_dataset_test_{idx}')
+            plt.title(f'ILSVRC2012t1_2_dataset_test_{idx}')
+            plt.imshow(grid)
+            plt.show()
 
 
 def Test_ILSVRC2012t3():
-    print('\033[34;30mTesting DataModule: ILSVRC2012 Task 3\033[0m')
-    dataset = ILSVRC2012_Task3(batch_size=2,
+    import matplotlib.pyplot as plt
+    print('[Test] DataModule: ILSVRC2012 Task 3')
+    dataset = ILSVRC2012_Task3(batch_size=16,
                                out_shape=(256, 256), )
     dataset.prepare_data()
     dataset.setup()
@@ -387,28 +403,35 @@ def Test_ILSVRC2012t3():
     print('dataset_train:')
     for idx, batch in enumerate(dataset_train):
         print(f'idx: {idx} batch_size: {batch.shape}')
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'ILSVRC2012t3_dataset_train_{idx}')
+            plt.title(f'ILSVRC2012t3_dataset_train_{idx}')
+            plt.imshow(grid)
+            plt.show()
     dataset_val = dataset.val_dataloader()
     print('dataset_val:')
     for idx, batch in enumerate(dataset_val):
         print(f'idx: {idx} batch_size: {batch.shape}')
-        for i in range(batch.size(0)):
-            img = batch[i].permute(1, 2, 0)
-            img.add_(1).mul_(0.5)
-            img = img.numpy()
-            cv2.imshow(f'val_{i}', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'ILSVRC2012t3_dataset_val_{idx}')
+            plt.title(f'ILSVRC2012t3_dataset_val_{idx}')
+            plt.imshow(grid)
+            plt.show()
     dataset_test = dataset.test_dataloader()
     print('dataset_test:')
     for idx, batch in enumerate(dataset_test):
         print(f'idx: {idx} batch_size: {batch.shape}')
-        for i in range(batch.size(0)):
-            img = batch[i].permute(1, 2, 0)
-            img.add_(1).mul_(0.5)
-            img = img.numpy()
-            cv2.imshow(f'test_{i}', img)
-            cv2.waitKey()
-            cv2.destroyAllWindows()
+        if idx < 2:
+            batch.add_(1.).mul_(0.5)
+            grid = torchvision.utils.make_grid(batch).permute(1, 2, 0).numpy()
+            plt.figure(f'ILSVRC2012t3_dataset_test_{idx}')
+            plt.title(f'ILSVRC2012t3_dataset_test_{idx}')
+            plt.imshow(grid)
+            plt.show()
 
 
 if __name__ == '__main__':
