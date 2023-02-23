@@ -67,10 +67,15 @@ class SNPatchGAN(LightningModule):
             self.complete_result = self.refined_result * self.mask + self.ground_truth * (1. - self.mask)
 
             # log sampled images
-            sample_imgs: torch.Tensor = self.ground_truth
+            broad_mask = torch.ones_like(self.ground_truth).type_as(self.ground_truth) * self.mask
+            broad_mask.mul_(2.).add_(-1.)
+            sample_imgs: torch.Tensor = torch.cat(
+                [self.incomplete, broad_mask,
+                 self.coarse_result, self.refined_result,
+                 self.complete_result, self.ground_truth], dim=3)
             sample_imgs.add_(1.).mul_(0.5)
-            grid = torchvision.utils.make_grid(sample_imgs)
-            self.logger.experiment.add_image("training_generated_images", grid, self.current_epoch)
+            grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
+            # self.logger.experiment.add_image("training_generated_images", grid, self.current_epoch)
 
             # adversarial loss is binary cross-entropy
             g_l1_loss = self.hparams.l1_loss_alpha * \
@@ -79,6 +84,8 @@ class SNPatchGAN(LightningModule):
             g_hinge_loss = -torch.mean(self.discriminator(self.complete_result))
             g_loss = g_l1_loss + g_hinge_loss
             self.log("g_loss", g_loss, prog_bar=True)
+            # self.log("train_g_l1_loss", g_l1_loss, prog_bar=True)
+            # self.log("train_g_hinge_loss", g_hinge_loss, prog_bar=True)
 
             return g_loss
 
@@ -105,14 +112,20 @@ class SNPatchGAN(LightningModule):
             max_delta_height_width=(self.hparams.max_delta_height, self.hparams.max_delta_width)
         )
         # generate images
-        _, refined_result = self(incomplete, mask)
+        coarse_result, refined_result = self(incomplete, mask)
         complete_result = refined_result * mask + ground_truth * (1. - mask)
 
+        l1_loss = F.l1_loss(complete_result, ground_truth)
+        self.log('val_l1_loss', l1_loss, prog_bar=True)
+
         # log sampled images
-        sample_imgs: torch.Tensor = ground_truth
+        broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
+        broad_mask.mul_(2.).add_(-1.)
+        sample_imgs: torch.Tensor = torch.cat(
+            [incomplete, broad_mask, coarse_result, refined_result, complete_result, ground_truth], dim=3)
         sample_imgs.add_(1.).mul_(0.5)
-        grid = torchvision.utils.make_grid(sample_imgs)
-        self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch)
+        grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
+        # self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch)
 
     def configure_optimizers(self):
         lr = self.hparams.lr
@@ -123,5 +136,3 @@ class SNPatchGAN(LightningModule):
         opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=(b1, b2))
         return [opt_g, opt_d], []
 
-    def on_validation_epoch_end(self):
-        pass
