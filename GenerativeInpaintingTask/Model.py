@@ -67,7 +67,7 @@ class SNPatchGAN(LightningModule):
             self.complete_result = self.refined_result * self.mask + self.ground_truth * (1. - self.mask)
 
             # log sampled images
-            sample_imgs: torch.Tensor = self.complete_result[:self.hparams.visualization_max_out]
+            sample_imgs: torch.Tensor = self.ground_truth
             sample_imgs.add_(1.).mul_(0.5)
             grid = torchvision.utils.make_grid(sample_imgs)
             self.logger.experiment.add_image("training_generated_images", grid, self.current_epoch)
@@ -109,7 +109,7 @@ class SNPatchGAN(LightningModule):
         complete_result = refined_result * mask + ground_truth * (1. - mask)
 
         # log sampled images
-        sample_imgs: torch.Tensor = complete_result[:self.hparams.visualization_max_out]
+        sample_imgs: torch.Tensor = ground_truth
         sample_imgs.add_(1.).mul_(0.5)
         grid = torchvision.utils.make_grid(sample_imgs)
         self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch)
