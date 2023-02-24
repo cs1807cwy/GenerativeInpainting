@@ -56,6 +56,7 @@ class SNPatchGAN(LightningModule):
         # endregion
 
         # region 2. extract input for net
+        real_batch_size = batch.size()
         if self.hparams.guided:
             ground_truth, edge = batch
         else:
@@ -83,8 +84,20 @@ class SNPatchGAN(LightningModule):
         complete_result = refined_result * mask + ground_truth * (1. - mask)
         # endregion
 
-        # region 6. hinge loss & l1 loss
-        g_hinge_loss = -torch.mean(self.discriminator(complete_result))
+        # region 6. wrapping generator's output for discriminator
+        complete_for_discrimination = complete_result
+        if self.hparams.gan_with_mask:
+            complete_for_discrimination = \
+                torch.cat([complete_for_discrimination,
+                           torch.tile(mask, (real_batch_size[0], 1, 1, 1))],
+                          dim=1)
+        if self.hparams.guided:
+            complete_for_discrimination = \
+                torch.cat([complete_for_discrimination, masked_edge], dim=1)
+        # endregion
+
+        # region 7. generator hinge loss & l1 loss
+        g_hinge_loss = -torch.mean(self.discriminator(complete_for_discrimination))
         g_loss = self.hparams.gan_loss_alpha * g_hinge_loss
         if self.hparams.l1_loss:
             g_l1_loss = (F.l1_loss(ground_truth, coarse_result) +
@@ -92,20 +105,20 @@ class SNPatchGAN(LightningModule):
             g_loss += self.hparams.l1_loss_alpha * g_l1_loss
         # endregion
 
-        # region 7. optimize generator
+        # region 8. optimize generator
         g_opt.zero_grad()
         self.manual_backward(g_loss)
         g_opt.step()
         # endregion
 
-        # region 8. log generator losses
+        # region 9. log generator losses
         self.log("train_g_loss", g_loss, prog_bar=True)
         if self.hparams.l1_loss:
             self.log("train_g_l1_loss", g_l1_loss, prog_bar=True)
         self.log("train_g_hinge_loss", g_hinge_loss, prog_bar=True)
         # endregion
 
-        # region 9. log generated images
+        # region 10. log generated images
         # broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
         # broad_mask.mul_(2.).add_(-1.)
         # sample_imgs: torch.Tensor = torch.cat(
@@ -117,44 +130,49 @@ class SNPatchGAN(LightningModule):
         # self.logger.experiment.add_image("training_generated_images", grid, self.current_epoch)
         # endregion
 
-        # region 10. concatenate positive-negtive pairs for discriminator
-        pos_neg_pair = torch.cat([ground_truth, complete_result], dim=1)
+        # region 11. concatenate positive-negtive pairs for discriminator
+        pos_neg_pair = torch.cat([ground_truth, complete_result], dim=0)
         if self.hparams.gan_with_mask:
             pos_neg_pair = torch.cat([pos_neg_pair,
-                                      torch.tile(mask, (self.hparams.batch_size * 2, 1, 1, 1))],
+                                      torch.tile(mask, (real_batch_size[0] * 2, 1, 1, 1))],
                                      dim=1)
         # endregion
 
-        # region 11. concatenate the guide map for discriminator
+        # region 12. concatenate the guide map for discriminator
         if self.hparams.guided:
             pos_neg_pair = torch.cat([pos_neg_pair,
                                       torch.tile(masked_edge, (2, 1, 1, 1))],
                                      dim=1)
         # endregion
 
-        # region 12. classify result output by discriminator
-        classify_result = self.discriminator(pos_neg_pair.detach())
+        # region 13. classify result output by discriminator
+        classify_result = self.discriminator(pos_neg_pair.detach()) # detach to train discriminator alone
         # fairly extract positive-negative reality result
         pos, neg = torch.split(classify_result, classify_result.size(0) // 2)
         # endregion
 
-        # region 13. discriminator loss is hinge loss
+        # region 14. discriminator hinge loss
         d_loss = 0.5 * (torch.mean(F.relu(1. - pos)) + torch.mean(F.relu(1. + neg)))
         # endregion
 
-        # region 14. optimize discriminator
+        # region 15. optimize discriminator
         d_opt.zero_grad()
         self.manual_backward(d_loss)
         d_opt.step()
         # endregion
 
-        # region 15. log discriminator losses
+        # region 16. log discriminator losses
         self.log("train_d_loss", d_loss, prog_bar=True)
+        # endregion
+
+        # region log something global
+        self.log('iter', float(self.global_step), on_step=True, prog_bar=True)
         # endregion
 
     def validation_step(self, batch, batch_idx):
 
         # region 1. extract input for net
+        real_batch_size = batch.size()
         if self.hparams.guided:
             ground_truth, edge = batch
         else:
@@ -182,8 +200,20 @@ class SNPatchGAN(LightningModule):
         complete_result = refined_result * mask + ground_truth * (1. - mask)
         # endregion
 
-        # region 5. hinge loss & l1 loss
-        g_hinge_loss = -torch.mean(self.discriminator(complete_result))
+        # region 5. wrapping generator's output for discriminator
+        complete_for_discrimination = complete_result
+        if self.hparams.gan_with_mask:
+            complete_for_discrimination = \
+                torch.cat([complete_for_discrimination,
+                           torch.tile(mask, (real_batch_size[0], 1, 1, 1))],
+                          dim=1)
+        if self.hparams.guided:
+            complete_for_discrimination = \
+                torch.cat([complete_for_discrimination, masked_edge], dim=1)
+        # endregion
+
+        # region 6. generator hinge loss & l1 loss
+        g_hinge_loss = -torch.mean(self.discriminator(complete_for_discrimination))
         g_loss = self.hparams.gan_loss_alpha * g_hinge_loss
         if self.hparams.l1_loss:
             g_l1_loss = (F.l1_loss(ground_truth, coarse_result) +
@@ -191,14 +221,14 @@ class SNPatchGAN(LightningModule):
             g_loss += self.hparams.l1_loss_alpha * g_l1_loss
         # endregion
 
-        # region 6. log generator losses
+        # region 7. log generator losses
         self.log("val_g_loss", g_loss, prog_bar=True)
         if self.hparams.l1_loss:
             self.log("val_g_l1_loss", g_l1_loss, prog_bar=True)
         self.log("val_g_hinge_loss", g_hinge_loss, prog_bar=True)
         # endregion
 
-        # region 7. log generated images
+        # region 8. log generated images
         # broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
         # broad_mask.mul_(2.).add_(-1.)
         # sample_imgs: torch.Tensor = torch.cat(
