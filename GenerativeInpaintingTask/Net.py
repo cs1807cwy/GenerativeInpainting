@@ -48,7 +48,7 @@ class GatedConv2d(nn.Module):
         # the former: represents incomplete feature (not gated)
         # the latter: represents soft gating raw weight (later normalized to [0,1] using Sigmoid)
         incomplete_feature, soft_gating_raw_weight = \
-            all_feature.split(split_size=(all_feature.size(1) + 1) // 2, dim=1)
+            all_feature.split(split_size=all_feature.size(1) // 2, dim=1)
 
         incomplete_feature_activated = \
             self.incomplete_feature_activation(incomplete_feature)
@@ -114,7 +114,17 @@ class SpectralNormConv2d(nn.Module):
                                padding_mode,
                                device,
                                dtype)
-        self.conv2d_sn = nn.utils.parametrizations.spectral_norm(conv2d_std)
+        self.conv2d_sn = nn.utils.parametrizations.spectral_norm(nn.Conv2d(in_channels,
+                                                                           out_channels,
+                                                                           kernel_size,
+                                                                           stride,
+                                                                           padding,
+                                                                           dilation,
+                                                                           groups,
+                                                                           bias,
+                                                                           padding_mode,
+                                                                           device,
+                                                                           dtype))
         self.feature_activation = activation(**actkwargs)
 
     def forward(self, x):
@@ -187,7 +197,7 @@ class ContextualAttention(nn.Module):
         # process mask
         if mask is None:
             mask = torch.zeros([1, 1, bs[2], bs[3]]).type_as(f)  # [N=1, C=1, H, W]
-        int_ms = list(mask.size())
+
         # m shape: [1, C*k*k, L]
         m = extract_image_patches(mask, kernel_size=(self.kernel_size, self.kernel_size),
                                   strides=(self.stride, self.stride),
