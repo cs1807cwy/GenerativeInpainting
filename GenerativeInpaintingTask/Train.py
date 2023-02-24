@@ -24,7 +24,7 @@ def train():
     model = SNPatchGAN(256, 256, 3, 128, 128, 32, 32, 0, 0, batch_size=batch_size)
     # tensorboard = TensorBoardLogger(save_dir='.', name='SN_PatchGAN_logs')
     csv = CSVLogger(save_dir='.', name='SN_PatchGAN_logs')
-    ddp_strategy = DDPStrategy(find_unused_parameters=False)
+    # ddp_strategy = DDPStrategy(find_unused_parameters=False)
     checkpoint_callback = ModelCheckpoint(
         save_last=True,
         every_n_epochs=train_save_point_epoches,
@@ -38,7 +38,7 @@ def train():
         # max_epochs=10,
         max_steps=150,
         callbacks=[TQDMProgressBar(refresh_rate=20), checkpoint_callback],
-        strategy=ddp_strategy,
+        strategy='ddp',
         check_val_every_n_epoch=None,
         val_check_interval=validation_period_step,
         limit_val_batches=1. if validation else 0,

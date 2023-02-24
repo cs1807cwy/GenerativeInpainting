@@ -114,17 +114,7 @@ class SpectralNormConv2d(nn.Module):
                                padding_mode,
                                device,
                                dtype)
-        self.conv2d_sn = nn.utils.parametrizations.spectral_norm(nn.Conv2d(in_channels,
-                                                                           out_channels,
-                                                                           kernel_size,
-                                                                           stride,
-                                                                           padding,
-                                                                           dilation,
-                                                                           groups,
-                                                                           bias,
-                                                                           padding_mode,
-                                                                           device,
-                                                                           dtype))
+        self.conv2d_sn = nn.utils.parametrizations.spectral_norm(conv2d_std)
         self.feature_activation = activation(**actkwargs)
 
     def forward(self, x):
