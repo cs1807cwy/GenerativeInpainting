@@ -254,31 +254,17 @@ class ILSVRC2012_Task3(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-    def prepare_data(self):
-
+    def setup(self, stage=None):
         def _get_filenames(data_dir: str) -> list[str]:
             image_list: list[str] = os.listdir(data_dir)
             image_paths: list[str] = [os.path.join(data_dir, _) for _ in image_list]
             return image_paths
 
-        # list & collect all images
-        self.train_image_paths = _get_filenames(self.train_data_dir)
-        self.val_image_paths = _get_filenames(self.validation_data_dir)
-        self.test_image_paths = _get_filenames(self.test_data_dir)
-
-        # counting
-        # self.train_count: int = len(self.train_image_paths)
-        # self.val_count: int = len(self.val_image_paths)
-        # self.test_count: int = len(self.test_image_paths)
-        #
-        # print(f'ILSVRCt3 total samples: {self.train_count + self.val_count + self.test_count}')
-        # print(f'ILSVRCt3 train samples: {self.train_count}')
-        # print(f'ILSVRCt3 val samples: {self.val_count}')
-        # print(f'ILSVRCt3 test samples: {self.test_count}')
-
-    def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
+            # list & collect all images
+            self.train_image_paths = _get_filenames(self.train_data_dir)
+            self.val_image_paths = _get_filenames(self.validation_data_dir)
             self.ilsvrc_t3_train: ILSVRC2012_Task3._dataset = \
                 ILSVRC2012_Task3._dataset(self.train_image_paths, self.out_shape)
             self.ilsvrc_val: ILSVRC2012_Task3._dataset = \
@@ -286,6 +272,7 @@ class ILSVRC2012_Task3(LightningDataModule):
 
         # Assign test dataset for use in dataloader(s)
         if stage == "test" or stage is None:
+            self.test_image_paths = _get_filenames(self.test_data_dir)
             self.ilsvrc_test: ILSVRC2012_Task3._dataset = \
                 ILSVRC2012_Task3._dataset(self.test_image_paths, self.out_shape)
 
@@ -350,6 +337,7 @@ def Test_CelebAMaskHQ():
             plt.imshow(grid)
             plt.show()
 
+
 def Test_ILSVRC2012t1_2():
     import matplotlib.pyplot as plt
     print('[Test] DataModule: ILSVRC2012 Task 1&2')
@@ -396,8 +384,7 @@ def Test_ILSVRC2012t3():
     import matplotlib.pyplot as plt
     print('[Test] DataModule: ILSVRC2012 Task 3')
     dataset = ILSVRC2012_Task3(batch_size=16,
-                               out_shape=(256, 256), )
-    dataset.prepare_data()
+                               out_shape=(256, 256))
     dataset.setup()
     dataset_train = dataset.train_dataloader()
     print('dataset_train:')
