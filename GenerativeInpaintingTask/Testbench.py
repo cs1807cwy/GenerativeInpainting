@@ -1,4 +1,4 @@
-#%%
+# %%
 
 import os
 
@@ -19,14 +19,15 @@ PATH_DATASETS = os.environ.get("PATH_DATASETS", ".")
 BATCH_SIZE = 256 if torch.cuda.is_available() else 64
 NUM_WORKERS = 1
 
-#%%
+
+# %%
 
 class MNISTDataModule(LightningDataModule):
     def __init__(
-        self,
-        data_dir: str = PATH_DATASETS,
-        batch_size: int = BATCH_SIZE,
-        num_workers: int = NUM_WORKERS,
+            self,
+            data_dir: str = PATH_DATASETS,
+            batch_size: int = BATCH_SIZE,
+            num_workers: int = NUM_WORKERS,
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -71,7 +72,8 @@ class MNISTDataModule(LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.mnist_test, batch_size=self.batch_size, num_workers=self.num_workers)
 
-#%%
+
+# %%
 
 class Generator(nn.Module):
     def __init__(self, latent_dim, img_shape):
@@ -99,7 +101,8 @@ class Generator(nn.Module):
         img = img.view(img.size(0), *self.img_shape)
         return img
 
-#%%
+
+# %%
 
 class Discriminator(nn.Module):
     def __init__(self, img_shape):
@@ -120,20 +123,21 @@ class Discriminator(nn.Module):
 
         return validity
 
-#%%
+
+# %%
 
 class GAN(LightningModule):
     def __init__(
-        self,
-        channels,
-        width,
-        height,
-        latent_dim: int = 100,
-        lr: float = 0.0002,
-        b1: float = 0.5,
-        b2: float = 0.999,
-        batch_size: int = BATCH_SIZE,
-        **kwargs,
+            self,
+            channels,
+            width,
+            height,
+            latent_dim: int = 100,
+            lr: float = 0.0002,
+            b1: float = 0.5,
+            b2: float = 0.999,
+            batch_size: int = BATCH_SIZE,
+            **kwargs,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -162,7 +166,6 @@ class GAN(LightningModule):
 
         # train generator
         if optimizer_idx == 0:
-
             # generate images
             self.generated_imgs = self(z)
 
@@ -223,7 +226,8 @@ class GAN(LightningModule):
         grid = torchvision.utils.make_grid(sample_imgs)
         self.logger.experiment.add_image("validation_generated_images", grid, self.current_epoch)
 
-#%%
+
+# %%
 
 def main():
     dm = MNISTDataModule()
@@ -240,5 +244,27 @@ def main():
     )
     trainer.fit(model, dm)
 
+
+def test():
+    x = torch.zeros(2, 2, 3, 4)
+    y = torch.ones(2, 2, 3, 4)
+    y[0, 0, 0, 0] = 48
+    mask = torch.zeros(1, 1, 3, 4)
+    mask[:, :, 1:2, 1:3] = 1.
+    total_count = np.prod(x.size())
+    invalid_count = torch.sum(mask) * x.size(0) * x.size(1)
+    print(f'total_count: {total_count}, invalid_count: {invalid_count}')
+
+    l1_loss = F.l1_loss(x, y)
+    print(f'l1_loss: {l1_loss}')
+
+    mask_x = x * mask
+    mask_y = y * mask
+    print(f'mask_x: {mask_x}\n'
+          f'mask_y: {mask_y}')
+    m_l1_loss = F.l1_loss(mask_x, mask_y) * total_count / invalid_count
+    print(f'm_l1_loss: {m_l1_loss}')
+
 if __name__ == '__main__':
-    main()
+    # main()
+    test()

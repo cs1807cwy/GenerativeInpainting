@@ -13,10 +13,11 @@ from DataModule import CelebAMaskHQ, ILSVRC2012_Task1_2, ILSVRC2012_Task3
 from Model import SNPatchGAN
 
 max_iteration: int = 100000000
-validation_period_step: int = 2000
+validation_period_step: int = 50
 train_save_point_epoches: int = 4000
-validation: bool = False
+validation: bool = True
 batch_size = 4
+device = [1,7]
 
 
 def train():
@@ -34,11 +35,12 @@ def train():
         logger=csv,
         default_root_dir='./SN_PatchGAN_logs',
         accelerator="gpu",
-        devices=[1, 7] if torch.cuda.is_available() else None,  # limiting got iPython runs
+        devices=device if torch.cuda.is_available() else 1,
         # max_epochs=10,
         max_steps=150,
+        # max_steps=max_iteration,
         callbacks=[TQDMProgressBar(refresh_rate=20), checkpoint_callback],
-        strategy='ddp',
+        strategy='ddp', # use build-in default DDPStrategy, it casts FLAG find_unused_parameters=True
         check_val_every_n_epoch=None,
         val_check_interval=validation_period_step,
         limit_val_batches=1. if validation else 0,
