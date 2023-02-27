@@ -3,6 +3,8 @@ import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 from Net import InpaintContextualAttentionGenerator, SpectralNormMarkovianDiscriminator
 from Util import mask_image
+import numpy as np
+from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Union
 
 
 class SNPatchGAN(LightningModule):
@@ -49,7 +51,7 @@ class SNPatchGAN(LightningModule):
     def forward(self, x, mask):
         return self.generator(x, mask)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch, batch_idx: int):
 
         # region 1. get optimizers
         g_opt, d_opt = self.optimizers()
@@ -169,7 +171,7 @@ class SNPatchGAN(LightningModule):
         self.log('iter', float(self.global_step), on_step=True, prog_bar=True)
         # endregion
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx: int):
 
         # region 1. extract input for net
         real_batch_size = batch.size()
@@ -222,10 +224,10 @@ class SNPatchGAN(LightningModule):
         # endregion
 
         # region 7. log generator losses
-        self.log("val_g_loss", g_loss, prog_bar=True)
+        self.log("val_g_loss", g_loss, prog_bar=True, sync_dist=True)
         if self.hparams.l1_loss:
-            self.log("val_g_l1_loss", g_l1_loss, prog_bar=True)
-        self.log("val_g_hinge_loss", g_hinge_loss, prog_bar=True)
+            self.log("val_g_l1_loss", g_l1_loss, prog_bar=True, sync_dist=True)
+        self.log("val_g_hinge_loss", g_hinge_loss, prog_bar=True, sync_dist=True)
         # endregion
 
         # region 8. log generated images
@@ -237,8 +239,78 @@ class SNPatchGAN(LightningModule):
         #      complete_result, ground_truth], dim=3)
         # sample_imgs.add_(1.).mul_(0.5)
         # grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
-        # self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch)
+        # self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch, sync_dist=True)
         # endregion
+
+        # region 9. metrics l1 loss & l2 loss
+        total_count = np.prod(ground_truth.size())
+        invalid_count = torch.sum(mask) * ground_truth.size(0) * ground_truth.size(1)
+        metric_l1_err = 0.5 * F.l1_loss(complete_result, ground_truth) * total_count / invalid_count
+        metric_l2_err = 0.5 * F.mse_loss(complete_result, ground_truth) * total_count / invalid_count
+
+        # region 10. log metric losses
+        self.log("val_metric_l1_err", metric_l1_err, prog_bar=True, sync_dist=True)
+        self.log("val_metric_l2_err", metric_l2_err, prog_bar=True, sync_dist=True)
+        # endregion
+
+    def test_step(self, batch, batch_idx: int):
+
+        # region 1. extract input for net
+        real_batch_size = batch.size()
+        if self.hparams.guided:
+            ground_truth, edge = batch
+        else:
+            ground_truth = batch
+        # endregion
+
+        # region 2. prepare incomplete(masked)_image & mask
+        incomplete, mask = mask_image(
+            ground_truth,
+            image_height_width=(self.hparams.image_height, self.hparams.image_width),
+            mask_height_width=(self.hparams.mask_height, self.hparams.mask_width),
+            margin_vertical_horizontal=(self.hparams.vertical_margin, self.hparams.horizontal_margin),
+            max_delta_height_width=(self.hparams.max_delta_height, self.hparams.max_delta_width)
+        )
+        # endregion
+
+        # region 3. concatenate the guide map for generator
+        if self.hparams.guided:
+            masked_edge = edge * mask
+            incomplete = torch.cat([incomplete, masked_edge], dim=1)
+        # endregion
+
+        # region 4. generate images
+        coarse_result, refined_result = self(incomplete, mask)
+        complete_result = refined_result * mask + ground_truth * (1. - mask)
+        # endregion
+
+        # region 5. metrics l1 loss & l2 loss
+        total_count = np.prod(ground_truth.size())
+        invalid_count = torch.sum(mask) * ground_truth.size(0) * ground_truth.size(1)
+        metric_l1_err = 0.5 * F.l1_loss(complete_result, ground_truth) * total_count / invalid_count
+        metric_l2_err = 0.5 * F.mse_loss(complete_result, ground_truth) * total_count / invalid_count
+
+        # region 6. log metric losses
+        self.log("test_metric_l1_err", metric_l1_err, prog_bar=True, sync_dist=True)
+        self.log("test_metric_l2_err", metric_l2_err, prog_bar=True, sync_dist=True)
+        # endregion
+
+        # region 7. log generated images
+        # broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
+        # broad_mask.mul_(2.).add_(-1.)
+        # sample_imgs: torch.Tensor = torch.cat(
+        #     [incomplete, broad_mask,
+        #      coarse_result, refined_result,
+        #      complete_result, ground_truth], dim=3)
+        # sample_imgs.add_(1.).mul_(0.5)
+        # grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
+        # self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch, sync_dist=True)
+        # endregion
+
+    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
+        # TODO: should complete predict step
+        pass
+
 
     def configure_optimizers(self):
 
