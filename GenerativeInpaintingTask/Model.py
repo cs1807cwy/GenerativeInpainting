@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import torchvision
 from pytorch_lightning import LightningModule
 from Net import InpaintContextualAttentionGenerator, SpectralNormMarkovianDiscriminator
 from Util import mask_image
@@ -124,12 +125,12 @@ class SNPatchGAN(LightningModule):
         # broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
         # broad_mask.mul_(2.).add_(-1.)
         # sample_imgs: torch.Tensor = torch.cat(
-        #     [incomplete, broad_mask,
+        #     [incomplete[:, 0:3, :, :], broad_mask,
         #      coarse_result, refined_result,
         #      complete_result, ground_truth], dim=3)
         # sample_imgs.add_(1.).mul_(0.5)
         # grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
-        # self.logger.experiment.add_image("training_generated_images", grid, self.current_epoch)
+        # self.logger.experiment.add_image("train_generated_images", grid, self.current_epoch)
         # endregion
 
         # region 11. concatenate positive-negtive pairs for discriminator
@@ -148,7 +149,7 @@ class SNPatchGAN(LightningModule):
         # endregion
 
         # region 13. classify result output by discriminator
-        classify_result = self.discriminator(pos_neg_pair.detach()) # detach to train discriminator alone
+        classify_result = self.discriminator(pos_neg_pair.detach())  # detach to train discriminator alone
         # fairly extract positive-negative reality result
         pos, neg = torch.split(classify_result, classify_result.size(0) // 2)
         # endregion
@@ -168,7 +169,7 @@ class SNPatchGAN(LightningModule):
         # endregion
 
         # region log something global
-        self.log('iter', float(self.global_step), on_step=True, prog_bar=True)
+        # self.log('iter', float(self.global_step), on_step=True, prog_bar=True)
         # endregion
 
     def validation_step(self, batch, batch_idx: int):
@@ -231,15 +232,15 @@ class SNPatchGAN(LightningModule):
         # endregion
 
         # region 8. log generated images
-        # broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
-        # broad_mask.mul_(2.).add_(-1.)
-        # sample_imgs: torch.Tensor = torch.cat(
-        #     [incomplete, broad_mask,
-        #      coarse_result, refined_result,
-        #      complete_result, ground_truth], dim=3)
-        # sample_imgs.add_(1.).mul_(0.5)
-        # grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
-        # self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch, sync_dist=True)
+        broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
+        broad_mask.mul_(2.).add_(-1.)
+        sample_imgs: torch.Tensor = torch.cat(
+            [incomplete[:, 0:3, :, :], broad_mask,
+             coarse_result, refined_result,
+             complete_result, ground_truth], dim=3)
+        sample_imgs.add_(1.).mul_(0.5)
+        grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
+        self.logger.experiment.add_image("validate_generated_images", grid, batch_idx)
         # endregion
 
         # region 9. metrics l1 loss & l2 loss
@@ -256,7 +257,6 @@ class SNPatchGAN(LightningModule):
     def test_step(self, batch, batch_idx: int):
 
         # region 1. extract input for net
-        real_batch_size = batch.size()
         if self.hparams.guided:
             ground_truth, edge = batch
         else:
@@ -296,21 +296,38 @@ class SNPatchGAN(LightningModule):
         # endregion
 
         # region 7. log generated images
-        # broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
-        # broad_mask.mul_(2.).add_(-1.)
-        # sample_imgs: torch.Tensor = torch.cat(
-        #     [incomplete, broad_mask,
-        #      coarse_result, refined_result,
-        #      complete_result, ground_truth], dim=3)
-        # sample_imgs.add_(1.).mul_(0.5)
-        # grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
-        # self.logger.experiment.add_image("validating_generated_images", grid, self.current_epoch, sync_dist=True)
+        broad_mask = torch.ones_like(ground_truth).type_as(ground_truth) * mask
+        broad_mask.mul_(2.).add_(-1.)
+        sample_imgs: torch.Tensor = torch.cat(
+            [incomplete, broad_mask,
+             coarse_result, refined_result,
+             complete_result, ground_truth], dim=3)
+        sample_imgs.add_(1.).mul_(0.5)
+        grid = torchvision.utils.make_grid(sample_imgs, nrow=1)
+        self.logger.experiment.add_image("test_generated_images", grid, batch_idx)
         # endregion
 
     def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
-        # TODO: should complete predict step
-        pass
+        # region 1. extract input for net
+        if self.hparams.guided:
+            incomplete, mask, edge = batch
+        else:
+            incomplete, mask = batch
+        # endregion
 
+        # region 2. generate images
+        _, refined_result = self(incomplete, mask)
+        complete_result = refined_result * mask + incomplete * (1. - mask)
+        # endregion
+
+        # region 3. log generated images
+        broad_mask = torch.ones_like(incomplete).type_as(incomplete) * mask
+        broad_mask.mul_(2.).add_(-1.)
+        sample_imgs: torch.Tensor = complete_result
+        sample_imgs.add_(1.).mul_(0.5)
+        grid = torchvision.utils.make_grid(sample_imgs)
+        self.logger.experiment.add_image("predict_generated_images", grid, batch_idx)
+        # endregion
 
     def configure_optimizers(self):
 
