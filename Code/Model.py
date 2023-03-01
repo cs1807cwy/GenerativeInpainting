@@ -124,10 +124,16 @@ class SNPatchGAN(LightningModule):
 
         # region 8. optimize generator
         g_opt.zero_grad()
+
         # note: force no NaN to train GAN, may not be a good practice
-        if not torch.any(torch.isnan(g_loss)):
-            self.manual_backward(g_loss)
-            g_opt.step()
+        # if not torch.any(torch.isnan(g_loss)):
+        #     self.manual_backward(g_loss)
+        #     g_opt.step()
+
+        # note: currently use gradient norm clipping
+        self.manual_backward(g_loss)
+        torch.nn.utils.clip_grad_norm_(self.generator.parameters(), 1., 2., False)
+        g_opt.step()
         # endregion
 
         # region 9. log generator losses
@@ -178,11 +184,17 @@ class SNPatchGAN(LightningModule):
 
         # region 15. optimize discriminator
         d_opt.zero_grad()
+
         # note: force no NaN to train GAN, may not be a good practice
-        if not torch.any(torch.isnan(d_loss)):
-            self.manual_backward(d_loss)
-            d_opt.step()
+        # if not torch.any(torch.isnan(d_loss)):
+        #     self.manual_backward(d_loss)
+        #     d_opt.step()
         # endregion
+
+        # note: currently use gradient norm clipping
+        self.manual_backward(d_loss)
+        torch.nn.utils.clip_grad_norm_(self.discriminator.parameters(), 1., 2., False)
+        d_opt.step()
 
         # region 16. log discriminator losses
         self.log("train_d_loss", d_loss, prog_bar=True)
