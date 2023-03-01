@@ -25,7 +25,7 @@ trainer:
   gradient_clip_algorithm: null
   num_nodes: 1
   num_processes: null
-  devices: [2] # note: specify your GPU number(s) for acceleration as a list or set an integer that indicates how many GPUs to use
+  devices: [1] # note: specify your GPU number(s) for acceleration as a list or set an integer that indicates how many GPUs to use
   gpus: null
   auto_select_gpus: null
   tpu_cores: null
