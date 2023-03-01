@@ -21,7 +21,7 @@ trainer:
     - class_path: pytorch_lightning.callbacks.progress.TQDMProgressBar # note: display a tqdm progress bar
       init_args:
         refresh_rate: 20 # note: after processing these batches, tqdm'll update its display
-    - class_path: "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint" # note: specify ModelCheckpoint behavior
+    - class_path: pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint # note: specify ModelCheckpoint behavior
       init_args:
         save_last: true # note: save the last.ckpt which contains the latest net weights and optimizer parameters
         every_n_epochs: 50 # note: save .ckpt every n epochs
