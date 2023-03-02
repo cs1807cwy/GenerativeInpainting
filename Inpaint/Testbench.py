@@ -8,8 +8,8 @@ from pytorch_lightning import LightningDataModule, LightningModule, Trainer
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
-from DataModule import CelebAMaskHQ, ILSVRC2012_Task1_2, ILSVRC2012_Task3
-from Model import SNPatchGAN
+from .DataModule import CelebAMaskHQ, ILSVRC2012_Task1_2, ILSVRC2012_Task3
+from .Model import SNPatchGAN
 
 # hparams for Model
 image_height = 256
@@ -29,9 +29,9 @@ save_dir = 'Experiment/SN_PatchGAN_logs/saved_images'
 prefix = 'gen_'
 
 # hparams for DataModule
-train_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_train'
-validation_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_val'
-test_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_test_v10102019'
+train_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_train'
+validation_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_val'
+test_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_test_v10102019'
 out_shape = (image_height, image_width)
 num_workers: int = 4
 

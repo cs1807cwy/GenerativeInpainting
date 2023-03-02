@@ -34,7 +34,7 @@ class CelebAMaskHQ(LightningDataModule):
 
     def __init__(
             self,
-            data_dir: str = 'CelebAMask-HQ/CelebA-HQ-img',
+            data_dir: str = 'Example/CelebAMask-HQ/CelebA-HQ-img',
             out_shape: Optional[tuple[int, int]] = None,
             batch_size: int = 16,
             num_workers: int = 1,
@@ -134,9 +134,9 @@ class ILSVRC2012_Task1_2(LightningDataModule):
 
     def __init__(
             self,
-            train_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_train',
-            validation_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_val',
-            test_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_test_v10102019',
+            train_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_train',
+            validation_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_val',
+            test_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_test_v10102019',
             out_shape: Optional[tuple[int, int]] = None,
             batch_size: int = 16,
             num_workers: int = 1,
@@ -229,9 +229,9 @@ class ILSVRC2012_Task3(LightningDataModule):
 
     def __init__(
             self,
-            train_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_train_t3',
-            validation_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_val',
-            test_data_dir: str = 'ILSVRC2012/ILSVRC2012_img_test_v10102019',
+            train_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_train_t3',
+            validation_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_val',
+            test_data_dir: str = 'Example/ILSVRC2012/ILSVRC2012_img_test_v10102019',
             out_shape: Optional[tuple[int, int]] = None,
             batch_size: int = 16,
             num_workers: int = 1,
@@ -284,7 +284,7 @@ class ILSVRC2012_Task3(LightningDataModule):
 def Test_CelebAMaskHQ():
     import matplotlib.pyplot as plt
     print('[Test] DataModule: CelebAMask-HQ')
-    dataset = CelebAMaskHQ(data_dir='./CelebAMask-HQ/CelebA-HQ-img',
+    dataset = CelebAMaskHQ(data_dir='Example/CelebAMask-HQ/CelebA-HQ-img',
                            batch_size=2,
                            out_shape=(256, 256),
                            validation_ratio=0.1,

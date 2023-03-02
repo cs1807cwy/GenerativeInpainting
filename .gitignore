@@ -152,5 +152,4 @@ cython_debug/
 #.idea/
 
 # Datasets
-CelebAMask-HQ/
-ILSVRC2012/
+Example/
