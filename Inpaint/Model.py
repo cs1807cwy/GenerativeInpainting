@@ -5,8 +5,8 @@ import torch
 import torch.nn.functional as F
 import torchvision
 from pytorch_lightning import LightningModule
-from Net import InpaintContextualAttentionGenerator, SpectralNormMarkovianDiscriminator
-from Util import mask_image
+from .Net import InpaintContextualAttentionGenerator, SpectralNormMarkovianDiscriminator
+from .Util import mask_image
 import numpy as np
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Union
 

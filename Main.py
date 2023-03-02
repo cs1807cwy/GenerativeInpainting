@@ -2,8 +2,7 @@
 from pytorch_lightning.cli import LightningCLI
 
 # simple demo classes for your convenience
-from DataModule import CelebAMaskHQ, ILSVRC2012_Task1_2, ILSVRC2012_Task3
-from Model import SNPatchGAN
+from Inpaint import *
 
 
 def cli_main():

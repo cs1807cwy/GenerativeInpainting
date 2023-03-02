@@ -5,7 +5,7 @@ from torch.nn.utils import spectral_norm as spectral_norm_fn
 from torch.nn.utils import weight_norm as weight_norm_fn
 from typing import Any, Dict, Generator, Iterable, List, Optional, Type, Union
 
-from Util import extract_image_patches, same_padding, mask_image
+from .Util import extract_image_patches, same_padding, mask_image
 
 
 # Elementary Networks
