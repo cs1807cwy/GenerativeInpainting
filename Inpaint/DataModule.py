@@ -49,7 +49,7 @@ class CelebAMaskHQ(LightningDataModule):
         self.validation_ratio = validation_ratio
         self.test_ratio = test_ratio
 
-    def prepare_data(self):
+    def setup(self, stage=None):
 
         def _get_filenames(data_dir: str) -> list[str]:
             image_list: list[str] = os.listdir(data_dir)
@@ -73,7 +73,6 @@ class CelebAMaskHQ(LightningDataModule):
         # print(f'CelebA-HQ train_val samples: {len(self.train_val_image_paths)}')
         # print(f'CelebA-HQ test samples: {len(self.test_image_paths)}')
 
-    def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
             train_image_paths, val_image_paths = \
@@ -149,7 +148,7 @@ class ILSVRC2012_Task1_2(LightningDataModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-    def prepare_data(self):
+    def setup(self, stage=None):
 
         def _get_filenames(data_dir: str) -> list[str]:
             image_list: list[str] = os.listdir(data_dir)
@@ -171,7 +170,6 @@ class ILSVRC2012_Task1_2(LightningDataModule):
         # print(f'ILSVRCt1_2 val samples: {self.val_count}')
         # print(f'ILSVRCt1_2 test samples: {self.test_count}')
 
-    def setup(self, stage=None):
         # Assign train/val datasets for use in dataloaders
         if stage == "fit" or stage is None:
             self.ilsvrc_t1_2_train: ILSVRC2012_Task1_2._dataset = \
