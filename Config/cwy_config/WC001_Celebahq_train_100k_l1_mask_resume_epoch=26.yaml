@@ -39,7 +39,7 @@ trainer:
   gradient_clip_algorithm: null
   num_nodes: 1
   num_processes: null
-  devices: [6, 7] # note: there are two ways: 1. specify your GPU number(s) for acceleration as a list;  2. set an integer that indicates how many GPUs to use, lightning will do auto-detection for you
+  devices: [4, 5] # note: there are two ways: 1. specify your GPU number(s) for acceleration as a list;  2. set an integer that indicates how many GPUs to use, lightning will do auto-detection for you
   gpus: null
   auto_select_gpus: null
   tpu_cores: null
@@ -119,5 +119,5 @@ data: # note: specify your data manager(LightningDataModule) here
     num_workers: 4
     validation_ratio: 0.1
     test_ratio: 0.1
-ckpt_path: null
+ckpt_path: "/mnt/data1/cwy/ImageEnhancing/GenerativeInpainting/Experiment/Pretrained/WC001_Celebahq_train_100k_l1_mask_resume_epoch=26.ckpt"
 ...
