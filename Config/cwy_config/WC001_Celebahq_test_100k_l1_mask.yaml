@@ -1,0 +1,104 @@
+---
+# pytorch_lightning==1.9.1
+# config_test_example.yaml
+# just for quick start, no version specified
+seed_everything: true
+trainer:
+  logger:
+    - class_path: pytorch_lightning.loggers.TensorBoardLogger
+      init_args:
+        save_dir: "Experiment"
+        name: "WC001_Celebahq_test_100k_l1_mask"
+        version: "tensorboard_test"
+    - class_path: pytorch_lightning.loggers.CSVLogger
+      init_args:
+        save_dir: "Experiment"
+        name: "WC001_Celebahq_test_100k_l1_mask"
+        version: "csv_test"
+  enable_checkpointing: true
+  callbacks:
+    - class_path: pytorch_lightning.callbacks.progress.TQDMProgressBar
+      init_args:
+        refresh_rate: 20
+  default_root_dir: "Experiment/WC001_Celebahq_test_100k_l1_mask"
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  num_nodes: 1
+  num_processes: null
+  devices: 1 # note: specify your GPU number(s) for acceleration as a list or set an integer that indicates how many GPUs to use
+  gpus: null
+  auto_select_gpus: null
+  tpu_cores: null
+  ipus: null
+  enable_progress_bar: true
+  overfit_batches: 0.0
+  track_grad_norm: -1
+  check_val_every_n_epoch: null
+  fast_dev_run: false
+  accumulate_grad_batches: null
+  max_epochs: null
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  val_check_interval: null
+  log_every_n_steps: 2
+  accelerator: "cpu"
+  strategy: null
+  sync_batchnorm: false
+  precision: 32
+  enable_model_summary: true
+  num_sanity_val_steps: 2
+  resume_from_checkpoint: null
+  profiler: null
+  benchmark: null
+  deterministic: null
+  reload_dataloaders_every_n_epochs: 0
+  auto_lr_find: false
+  replace_sampler_ddp: true
+  detect_anomaly: false
+  auto_scale_batch_size: false
+  plugins: null
+  amp_backend: null
+  amp_level: null
+  move_metrics_to_cpu: false
+  multiple_trainloader_mode: max_size_cycle
+  inference_mode: true
+model:
+  class_path: Inpaint.SNPatchGAN
+  init_args:
+    image_height: 256
+    image_width: 256
+    image_channel: 3
+    mask_height: 128
+    mask_width: 128
+    max_delta_height: 32
+    max_delta_width: 32
+    vertical_margin: 0
+    horizontal_margin: 0
+    guided: false
+    batch_size: 8
+    l1_loss: true
+    l1_loss_alpha: 1.0
+    gan_loss_alpha: 1.0
+    gan_with_mask: true
+    lr: 0.0001
+    b1: 0.5
+    b2: 0.999
+    save_dir: "Experiment/WC001_Celebahq_test_100k_l1_mask/saved_images"
+    prefix: "gen_"
+data:
+  class_path: Inpaint.CelebAMaskHQ
+  init_args:
+    data_dir: "/mnt/data1/cwy/Datasets/CelebAMask-HQ/CelebA-HQ-img"
+    out_shape: [256, 256] # note: output image shape will be croped (and may be resized if image is too small) to out_shape
+    batch_size: 16 # note: batch_size is nominated by this value
+    num_workers: 4
+    validation_ratio: 0.1
+    test_ratio: 0.1
+ckpt_path: "Experiment/Pretrained/Celebahq_SNPatchGAN.ckpt" # note: check point path for loading state_dict
+...
