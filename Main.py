@@ -6,7 +6,7 @@ from Inpaint import *
 
 
 def cli_main():
-    cli = LightningCLI()
+    cli = LightningCLI(save_config_overwrite=True)
     # note: don't call fit!!
 
 

@@ -409,3 +409,7 @@ class SNPatchGAN(LightningModule):
         opt_g = torch.optim.Adam(self.generator.parameters(), lr=lr, betas=(b1, b2))
         opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=(b1, b2))
         return [opt_g, opt_d], []
+
+    def on_test_epoch_start(self):
+        os.makedirs('./ModelScript', exist_ok=True)
+        self.to_torchscript('./ModelScript/model.pt', method='trace')
